@@ -1,0 +1,23 @@
+[package]
+name = "rust-realsense-experiments"
+version = "0.1.0"
+authors = ["Markus Mayer <widemeadows@gmail.com>"]
+edition = "2018"
+default-run = "enumerate"
+
+[[bin]]
+name = "enumerate"
+path = "src/enumerate.rs"
+
+[[bin]]
+name = "pointcloud"
+path = "src/pointcloud.rs"
+
+[dependencies]
+realsense-rust = "0.3.2"
+anyhow = "1.0.32"
+tokio = { version = "0.2.22", features = ["full"] }
+crossbeam = "0.7.3"
+image = "0.23.9"
+kiss3d = "0.25.0"
+nalgebra = "0.22.0"
