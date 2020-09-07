@@ -5,10 +5,12 @@ use crossbeam::channel;
 use image::{DynamicImage, ImageFormat};
 use nalgebra::Point3;
 use pcdvizwindow::PcdVizWindow;
-use realsense_rust::pipeline::marker::Active;
+use realsense_rust::frame::marker::Depth;
+use realsense_rust::processing_block::marker::PointCloud;
 use realsense_rust::{
-    prelude::*, processing_block::marker as processing_block_marker, Config, Error as RsError,
-    Format, Pipeline, ProcessingBlock, Resolution, StreamKind,
+    frame::marker::Video, pipeline::marker::Active, prelude::*,
+    processing_block::marker as processing_block_marker, Config, Error as RsError, Format, Frame,
+    Pipeline, ProcessingBlock, Resolution, StreamKind,
 };
 use std::time::Duration;
 
@@ -42,39 +44,12 @@ pub async fn main() -> Result<()> {
         let color_frame = frames.color_frame()?.unwrap();
         let depth_frame = frames.depth_frame()?.unwrap();
 
-        // save video frame
-        {
-            let image: DynamicImage = color_frame.image()?.into();
-            image.save_with_format(
-                format!("sync-video-example-{}.png", color_frame.number()?),
-                ImageFormat::Png,
-            )?;
-        }
+        // Save the frames for inspection.
+        save_video_frame(&color_frame)?;
+        save_depth_frame(&depth_frame)?;
 
-        // save depth frame
-        {
-            let Resolution { width, height } = depth_frame.resolution()?;
-            let distance = depth_frame.distance(width / 2, height / 2)?;
-            println!("distance = {}", distance);
-
-            let image: DynamicImage = depth_frame.image()?.into();
-            image.save_with_format(
-                format!("sync-depth-example-{}.png", depth_frame.number()?),
-                ImageFormat::Png,
-            )?;
-        }
-
-        // compute point cloud
-        pointcloud.map_to(color_frame.clone())?;
-        let points_frame = pointcloud.calculate(depth_frame.clone())?;
-        let points = points_frame
-            .vertices()?
-            .iter()
-            .map(|vertex| {
-                let [x, y, z] = vertex.xyz;
-                Point3::new(x, y, z)
-            })
-            .collect::<Vec<_>>();
+        // Compute the point cloud.
+        let points = process_point_cloud(&mut pointcloud, color_frame, depth_frame)?;
 
         if tx.send(points).is_err() {
             break;
@@ -100,4 +75,45 @@ fn show_profiles(pipeline: &Pipeline<Active>) -> Result<()> {
         println!("stream data {}: {:#?}", idx, stream.get_data()?);
     }
     Ok(())
+}
+
+fn save_video_frame(color_frame: &Frame<Video>) -> Result<()> {
+    let image: DynamicImage = color_frame.image()?.into();
+    image.save_with_format(
+        format!("sync-video-example-{}.png", color_frame.number()?),
+        ImageFormat::Png,
+    )?;
+    Ok(())
+}
+
+fn save_depth_frame(depth_frame: &Frame<Depth>) -> Result<()> {
+    let Resolution { width, height } = depth_frame.resolution()?;
+    let distance = depth_frame.distance(width / 2, height / 2)?;
+    println!("distance = {}", distance);
+
+    let image: DynamicImage = depth_frame.image()?.into();
+    image.save_with_format(
+        format!("sync-depth-example-{}.png", depth_frame.number()?),
+        ImageFormat::Png,
+    )?;
+
+    Ok(())
+}
+
+fn process_point_cloud(
+    pointcloud: &mut ProcessingBlock<PointCloud>,
+    color_frame: Frame<Video>,
+    depth_frame: Frame<Depth>,
+) -> Result<Vec<Point3<f32>>> {
+    pointcloud.map_to(color_frame)?;
+    let points_frame = pointcloud.calculate(depth_frame)?;
+    let points = points_frame
+        .vertices()?
+        .iter()
+        .map(|vertex| {
+            let [x, y, z] = vertex.xyz;
+            Point3::new(x, y, z)
+        })
+        .collect::<Vec<_>>();
+    Ok(points)
 }
