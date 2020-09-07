@@ -126,11 +126,6 @@ fn process_point_cloud(
     Ok(points)
 }
 
-static mut max_x: f32 = 0f32;
-static mut min_x: f32 = 0f32;
-static mut min_y: f32 = 0f32;
-static mut max_y: f32 = 0f32;
-
 fn get_texcolor(texture: &Frame<Video>, [u, v]: &[i32; 2]) -> Result<(f32, f32, f32)> {
     let w = texture.width()?;
     let h = texture.height()?;
@@ -138,27 +133,22 @@ fn get_texcolor(texture: &Frame<Video>, [u, v]: &[i32; 2]) -> Result<(f32, f32, 
     let bytes_per_pixel = texture.bits_per_pixel()? / 8;
     let stride = texture.stride_in_bytes()?;
 
-    // let profile = texture.stream_profile()?;
-
     // https://github.com/IntelRealSense/librealsense/issues/6234
-    // Pretending that the pixel coordinates are correct gets us to the right spot.
+    // From https://github.com/IntelRealSense/librealsense/issues/6234#issuecomment-613352862:
+    //   The Field of View (FOV) of the Depth sensor is bigger than the RGB sensor's, hence while
+    //   the sensors overlap you can't have RGB data coverage on the boundaries of the depth frame.
+    //   The [U,V] outliers designate pixels for which the texture mapping occurs outside of the
+    //   RGB sensor's FOV. #2355
     let test_x = unsafe { std::mem::transmute::<i32, f32>(*u) };
     let test_y = unsafe { std::mem::transmute::<i32, f32>(*v) };
-    // let test_x = (*u as f32) / i32::max_value() as f32 + 0.5f32;
-    // let test_y = (*v as f32) / i32::max_value() as f32 + 0.5f32;
 
-    unsafe {
-        min_x = min_x.min(test_x);
-        max_x = max_x.max(test_x);
-        min_y = min_y.min(test_y);
-        max_y = max_y.max(test_y);
-
-        eprintln!("x range: {:?} .. {:?}", min_x, max_x);
-        eprintln!("y range: {:?} .. {:?}", min_y, max_y);
+    if test_x < 0f32 || test_x > 1f32 {
+        return Ok((0f32, 0f32, 0f32));
     }
 
-    // let x = std::cmp::min(std::cmp::max(u.abs() as usize * w, 0), w - 1);
-    // let y = std::cmp::min(std::cmp::max(v.abs() as usize * h, 0), h - 1);
+    if test_y < 0f32 || test_y > 1f32 {
+        return Ok((0f32, 0f32, 0f32));
+    }
 
     let x = std::cmp::min(
         std::cmp::max((test_x * w as f32) as isize, 0),
