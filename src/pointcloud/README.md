@@ -9,7 +9,7 @@ vertices, then render it in 3D.
 ## Texture mapping the vertices
 
 In an attempt to add colored pixels to the example code of 
-[realsense-rust](https://github.com/benhinchley/rust-librealsense) 0.3.2,
+[realsense-rust](https://github.com/jerry73204/realsense-rust) 0.3.2,
 I stumbled over an issue with the texture coordinates. Specifically,
 the [Frame](https://docs.rs/realsense-rust/0.3.2/realsense_rust/frame/struct.Frame.html) method [texture_coordinates()](https://docs.rs/realsense-rust/0.3.2/realsense_rust/frame/struct.Frame.html#method.texture_coordinates)
 returns an [rs2_pixel](https://docs.rs/realsense-sys/0.2.4/realsense_sys/struct.rs2_pixel.html), which is

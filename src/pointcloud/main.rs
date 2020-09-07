@@ -114,10 +114,9 @@ fn process_point_cloud(
         .zip(pixels.iter())
         .map(|(vertex, pixel)| {
             let [x, y, z] = vertex.xyz;
+            let xyz = Point3::new(x, y, z);
 
             let (r, g, b) = get_texcolor(&color_frame, &pixel.ij).expect("tex coords invalid");
-
-            let xyz = Point3::new(x, y, z);
             let rgb = Point3::new(r, g, b);
             (xyz, rgb)
         })

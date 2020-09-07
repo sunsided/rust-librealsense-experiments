@@ -1,6 +1,6 @@
 # Experiments with librealsense2 in Rust
 
-Toying around with / getting to know [librealsense-rust](https://github.com/jerry73204).
+Toying around with / getting to know [librealsense-rust](https://github.com/jerry73204/realsense-rust).
 Don't expect anything crazy here. 🙌
 
 ## Example applications
