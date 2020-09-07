@@ -21,15 +21,9 @@ pub async fn main() -> Result<()> {
     // Initialize the PointCloud filter.
     let mut pointcloud = ProcessingBlock::<processing_block_marker::PointCloud>::create()?;
 
-    // Init the pipeline.
+    // Init the pipeline and show the profile information of its streams.
     let mut pipeline = create_pipeline().await?;
-
-    // Show some stream information.
-    let profile = pipeline.profile();
-    for (idx, stream_result) in profile.streams()?.try_into_iter()?.enumerate() {
-        let stream = stream_result?;
-        println!("stream data {}: {:#?}", idx, stream.get_data()?);
-    }
+    show_profiles(&pipeline)?;
 
     // Process the frames.
     for _ in 0usize..1000 {
@@ -97,4 +91,13 @@ async fn create_pipeline() -> Result<Pipeline<Active>> {
         .enable_stream(StreamKind::Color, 0, 640, 0, Format::Rgb8, 30)?;
     let pipeline = pipeline.start_async(Some(config)).await?;
     Ok(pipeline)
+}
+
+fn show_profiles(pipeline: &Pipeline<Active>) -> Result<()> {
+    let profile = pipeline.profile();
+    for (idx, stream_result) in profile.streams()?.try_into_iter()?.enumerate() {
+        let stream = stream_result?;
+        println!("stream data {}: {:#?}", idx, stream.get_data()?);
+    }
+    Ok(())
 }
