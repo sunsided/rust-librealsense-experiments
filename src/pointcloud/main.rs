@@ -1,7 +1,6 @@
 mod pcdvizwindow;
 
 use anyhow::Result;
-use crossbeam::channel;
 use image::{DynamicImage, ImageFormat};
 use nalgebra::Point3;
 use pcdvizwindow::PcdVizWindow;
@@ -16,9 +15,7 @@ use std::time::Duration;
 
 #[tokio::main]
 pub async fn main() -> Result<()> {
-    let (tx, rx) = channel::unbounded();
-
-    PcdVizWindow::spawn_new(rx);
+    let window = PcdVizWindow::spawn_new();
 
     // Initialize the PointCloud filter.
     let mut pointcloud = ProcessingBlock::<processing_block_marker::PointCloud>::create()?;
@@ -48,10 +45,9 @@ pub async fn main() -> Result<()> {
         save_video_frame(&color_frame)?;
         save_depth_frame(&depth_frame)?;
 
-        // Compute the point cloud.
+        // Compute and visualize the point cloud.
         let points = process_point_cloud(&mut pointcloud, color_frame, depth_frame)?;
-
-        if tx.send(points).is_err() {
+        if window.update(points).is_err() {
             break;
         }
     }

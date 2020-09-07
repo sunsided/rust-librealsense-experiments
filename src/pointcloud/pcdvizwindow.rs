@@ -1,3 +1,4 @@
+use anyhow::Result;
 use crossbeam::channel;
 use kiss3d::{
     light::Light,
@@ -5,32 +6,34 @@ use kiss3d::{
 };
 use nalgebra::Point3;
 
+#[derive(Debug)]
 pub struct PcdVizWindow {
-    state: PcdVizState,
-    window: Window,
+    tx: channel::Sender<Vec<Point3<f32>>>,
 }
 
 impl PcdVizWindow {
-    pub fn spawn_new(rx: channel::Receiver<Vec<Point3<f32>>>) {
-        std::thread::spawn(move || {
-            PcdVizWindow::new(rx).run();
-        });
-    }
-
-    fn new(rx: channel::Receiver<Vec<Point3<f32>>>) -> Self {
+    #[must_use]
+    pub fn spawn_new() -> Self {
+        let (tx, rx) = channel::unbounded();
         let state = PcdVizState::new(rx);
-        let mut window = Window::new("point cloud");
-        window.set_light(Light::StickToCamera);
-        Self { state, window }
+
+        std::thread::spawn(move || {
+            let mut window = Window::new("point cloud");
+            window.set_light(Light::StickToCamera);
+            window.render_loop(state);
+        });
+
+        Self { tx }
     }
 
-    fn run(self) {
-        self.window.render_loop(self.state);
+    pub fn update(&self, points: Vec<Point3<f32>>) -> Result<()> {
+        self.tx.send(points)?;
+        Ok(())
     }
 }
 
 #[derive(Debug)]
-pub struct PcdVizState {
+struct PcdVizState {
     rx: channel::Receiver<Vec<Point3<f32>>>,
     points: Option<Vec<Point3<f32>>>,
 }
