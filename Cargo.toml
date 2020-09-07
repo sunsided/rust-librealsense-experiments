@@ -14,7 +14,7 @@ name = "pointcloud"
 path = "src/pointcloud/main.rs"
 
 [dependencies]
-realsense-rust = "0.3.2"
+realsense-rust = { version = "0.3.2", git = "https://github.com/sunsided/realsense-rust", branch = "feature/texture-coordinates"}
 anyhow = "1.0.32"
 tokio = { version = "0.2.22", features = ["full"] }
 crossbeam = "0.7.3"

@@ -5,6 +5,7 @@ use image::{DynamicImage, ImageFormat};
 use nalgebra::Point3;
 use pcdvizwindow::PcdVizWindow;
 use realsense_rust::frame::marker::Depth;
+use realsense_rust::frame::texture_coordinate;
 use realsense_rust::kind::Extension::Points;
 use realsense_rust::processing_block::marker::PointCloud;
 use realsense_rust::{
@@ -112,11 +113,11 @@ fn process_point_cloud(
     let points = vertices
         .iter()
         .zip(pixels.iter())
-        .map(|(vertex, pixel)| {
+        .map(|(vertex, uv)| {
             let [x, y, z] = vertex.xyz;
             let xyz = Point3::new(x, y, z);
 
-            let (r, g, b) = get_texcolor(&color_frame, &pixel.ij).expect("tex coords invalid");
+            let (r, g, b) = get_texcolor(&color_frame, uv).expect("tex coords invalid");
             let rgb = Point3::new(r, g, b);
             (xyz, rgb)
         })
@@ -124,7 +125,7 @@ fn process_point_cloud(
     Ok(points)
 }
 
-fn get_texcolor(texture: &Frame<Video>, [u, v]: &[i32; 2]) -> Result<(f32, f32, f32)> {
+fn get_texcolor(texture: &Frame<Video>, uv: &texture_coordinate) -> Result<(f32, f32, f32)> {
     let w = texture.width()?;
     let h = texture.height()?;
     let data = texture.data()?;
@@ -137,11 +138,11 @@ fn get_texcolor(texture: &Frame<Video>, [u, v]: &[i32; 2]) -> Result<(f32, f32, 
     //   the sensors overlap you can't have RGB data coverage on the boundaries of the depth frame.
     //   The [U,V] outliers designate pixels for which the texture mapping occurs outside of the
     //   RGB sensor's FOV. #2355
-    let x_raw = unsafe { std::mem::transmute::<i32, f32>(*u) };
-    let y_raw = unsafe { std::mem::transmute::<i32, f32>(*v) };
+    // let x_raw = unsafe { std::mem::transmute::<i32, f32>(*u) };
+    // let y_raw = unsafe { std::mem::transmute::<i32, f32>(*v) };
 
-    let x = scale_and_clamp(x_raw, w);
-    let y = scale_and_clamp(y_raw, h);
+    let x = scale_and_clamp(uv.u, w);
+    let y = scale_and_clamp(uv.v, h);
 
     let (x, y) = match (x, y) {
         (Some(x), Some(y)) => (x, y),

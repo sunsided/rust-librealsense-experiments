@@ -1540,8 +1540,7 @@ dependencies = [
 [[package]]
 name = "realsense-rust"
 version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "121860d0af544df56522613d582d0fa5ee90389d628d1f93f64891f39296a933"
+source = "git+https://github.com/sunsided/realsense-rust?branch=feature/texture-coordinates#8f734df5f89888388e79b26526920a977ac64826"
 dependencies = [
  "futures",
  "image 0.23.9",
@@ -1555,8 +1554,7 @@ dependencies = [
 [[package]]
 name = "realsense-sys"
 version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01ae74a9989f9863159c4f61fb9b6c3823e7deac48dc429d7236323447e5af26"
+source = "git+https://github.com/sunsided/realsense-rust?branch=feature/texture-coordinates#8f734df5f89888388e79b26526920a977ac64826"
 dependencies = [
  "anyhow",
  "cc",
