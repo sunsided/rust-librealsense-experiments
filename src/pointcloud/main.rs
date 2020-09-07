@@ -5,6 +5,7 @@ use crossbeam::channel;
 use image::{DynamicImage, ImageFormat};
 use nalgebra::Point3;
 use pcdvizwindow::PcdVizWindow;
+use realsense_rust::pipeline::marker::Active;
 use realsense_rust::{
     prelude::*, processing_block::marker as processing_block_marker, Config, Error as RsError,
     Format, Pipeline, ProcessingBlock, Resolution, StreamKind,
@@ -17,24 +18,20 @@ pub async fn main() -> Result<()> {
 
     PcdVizWindow::spawn_new(rx);
 
-    // pointcloud filter
+    // Initialize the PointCloud filter.
     let mut pointcloud = ProcessingBlock::<processing_block_marker::PointCloud>::create()?;
 
-    // init pipeline
-    let pipeline = Pipeline::new()?;
-    let config = Config::new()?
-        .enable_stream(StreamKind::Depth, 0, 640, 0, Format::Z16, 30)?
-        .enable_stream(StreamKind::Color, 0, 640, 0, Format::Rgb8, 30)?;
-    let mut pipeline = pipeline.start_async(Some(config)).await?;
+    // Init the pipeline.
+    let mut pipeline = create_pipeline().await?;
 
-    // show stream info
+    // Show some stream information.
     let profile = pipeline.profile();
     for (idx, stream_result) in profile.streams()?.try_into_iter()?.enumerate() {
         let stream = stream_result?;
         println!("stream data {}: {:#?}", idx, stream.get_data()?);
     }
 
-    // process frames
+    // Process the frames.
     for _ in 0usize..1000 {
         let timeout = Duration::from_millis(1000);
         let frames_result = pipeline.wait_async(Some(timeout)).await;
@@ -91,4 +88,13 @@ pub async fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+async fn create_pipeline() -> Result<Pipeline<Active>> {
+    let pipeline = Pipeline::new()?;
+    let config = Config::new()?
+        .enable_stream(StreamKind::Depth, 0, 640, 0, Format::Z16, 30)?
+        .enable_stream(StreamKind::Color, 0, 640, 0, Format::Rgb8, 30)?;
+    let pipeline = pipeline.start_async(Some(config)).await?;
+    Ok(pipeline)
 }
