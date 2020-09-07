@@ -158,7 +158,7 @@ fn get_texcolor(texture: &Frame<Video>, [u, v]: &[i32; 2]) -> Result<(f32, f32, 
 /// Scales the provided coordinate to a range of `0`..`max_value`. If the input
 /// coordinate is outside the range `0..1`, the value `None` is returned.
 fn scale_and_clamp(coordinate: f32, max_value: usize) -> Option<usize> {
-    if coordinate < 0f32 || coordinate > 1f32 {
+    if coordinate < 0f32 || coordinate >= 1f32 {
         return None;
     }
 
