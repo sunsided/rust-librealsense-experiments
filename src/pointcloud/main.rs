@@ -5,11 +5,13 @@ use image::{DynamicImage, ImageFormat};
 use nalgebra::Point3;
 use pcdvizwindow::PcdVizWindow;
 use realsense_rust::frame::marker::Depth;
+use realsense_rust::kind::Extension::Points;
 use realsense_rust::processing_block::marker::PointCloud;
 use realsense_rust::{
     frame::marker::Video, pipeline::marker::Active, prelude::*,
-    processing_block::marker as processing_block_marker, Config, Error as RsError, Format, Frame,
-    Pipeline, ProcessingBlock, Resolution, StreamKind,
+    processing_block::marker as processing_block_marker, stream_profile::*, Config,
+    Error as RsError, Format, Frame, Pipeline, ProcessingBlock, Resolution, StreamKind,
+    StreamProfile,
 };
 use std::time::Duration;
 
@@ -42,8 +44,8 @@ pub async fn main() -> Result<()> {
         let depth_frame = frames.depth_frame()?.unwrap();
 
         // Save the frames for inspection.
-        save_video_frame(&color_frame)?;
-        save_depth_frame(&depth_frame)?;
+        //        save_video_frame(&color_frame)?;
+        //        save_depth_frame(&depth_frame)?;
 
         // Compute and visualize the point cloud.
         let points = process_point_cloud(&mut pointcloud, color_frame, depth_frame)?;
@@ -100,16 +102,81 @@ fn process_point_cloud(
     pointcloud: &mut ProcessingBlock<PointCloud>,
     color_frame: Frame<Video>,
     depth_frame: Frame<Depth>,
-) -> Result<Vec<Point3<f32>>> {
-    pointcloud.map_to(color_frame)?;
-    let points_frame = pointcloud.calculate(depth_frame)?;
-    let points = points_frame
-        .vertices()?
+) -> Result<Vec<(Point3<f32>, Point3<f32>)>> {
+    pointcloud.map_to(color_frame.clone())?;
+    let points_frame = pointcloud.calculate(depth_frame.clone())?;
+
+    let vertices = points_frame.vertices()?;
+    let pixels = points_frame.texture_coordinates()?;
+    let pixels = points_frame.texture_coordinates()?;
+
+    let points = vertices
         .iter()
-        .map(|vertex| {
+        .zip(pixels.iter())
+        .map(|(vertex, pixel)| {
             let [x, y, z] = vertex.xyz;
-            Point3::new(x, y, z)
+
+            let (r, g, b) = get_texcolor(&color_frame, &pixel.ij).expect("tex coords invalid");
+
+            let xyz = Point3::new(x, y, z);
+            let rgb = Point3::new(r, g, b);
+            (xyz, rgb)
         })
         .collect::<Vec<_>>();
     Ok(points)
+}
+
+static mut max_x: f32 = 0f32;
+static mut min_x: f32 = 0f32;
+static mut min_y: f32 = 0f32;
+static mut max_y: f32 = 0f32;
+
+fn get_texcolor(texture: &Frame<Video>, [u, v]: &[i32; 2]) -> Result<(f32, f32, f32)> {
+    let w = texture.width()?;
+    let h = texture.height()?;
+    let data = texture.data()?;
+    let bytes_per_pixel = texture.bits_per_pixel()? / 8;
+    let stride = texture.stride_in_bytes()?;
+
+    // let profile = texture.stream_profile()?;
+
+    // https://github.com/IntelRealSense/librealsense/issues/6234
+    // Pretending that the pixel coordinates are correct gets us to the right spot.
+    let test_x = unsafe { std::mem::transmute::<i32, f32>(*u) };
+    let test_y = unsafe { std::mem::transmute::<i32, f32>(*v) };
+    // let test_x = (*u as f32) / i32::max_value() as f32 + 0.5f32;
+    // let test_y = (*v as f32) / i32::max_value() as f32 + 0.5f32;
+
+    unsafe {
+        min_x = min_x.min(test_x);
+        max_x = max_x.max(test_x);
+        min_y = min_y.min(test_y);
+        max_y = max_y.max(test_y);
+
+        eprintln!("x range: {:?} .. {:?}", min_x, max_x);
+        eprintln!("y range: {:?} .. {:?}", min_y, max_y);
+    }
+
+    // let x = std::cmp::min(std::cmp::max(u.abs() as usize * w, 0), w - 1);
+    // let y = std::cmp::min(std::cmp::max(v.abs() as usize * h, 0), h - 1);
+
+    let x = std::cmp::min(
+        std::cmp::max((test_x * w as f32) as isize, 0),
+        w as isize - 1,
+    ) as usize;
+    let y = std::cmp::min(
+        std::cmp::max((test_y * h as f32) as isize, 0),
+        h as isize - 1,
+    ) as usize;
+
+    let idx = x * bytes_per_pixel + y * stride;
+
+    let r = data[idx];
+    let g = data[idx + 1];
+    let b = data[idx + 2];
+
+    let r = r as f32 / 255f32;
+    let g = g as f32 / 255f32;
+    let b = b as f32 / 255f32;
+    Ok((r, g, b))
 }

@@ -8,7 +8,7 @@ use nalgebra::Point3;
 
 #[derive(Debug)]
 pub struct PcdVizWindow {
-    tx: channel::Sender<Vec<Point3<f32>>>,
+    tx: channel::Sender<Vec<(Point3<f32>, Point3<f32>)>>,
 }
 
 impl PcdVizWindow {
@@ -26,7 +26,7 @@ impl PcdVizWindow {
         Self { tx }
     }
 
-    pub fn update(&self, points: Vec<Point3<f32>>) -> Result<()> {
+    pub fn update(&self, points: Vec<(Point3<f32>, Point3<f32>)>) -> Result<()> {
         self.tx.send(points)?;
         Ok(())
     }
@@ -34,12 +34,12 @@ impl PcdVizWindow {
 
 #[derive(Debug)]
 struct PcdVizState {
-    rx: channel::Receiver<Vec<Point3<f32>>>,
-    points: Option<Vec<Point3<f32>>>,
+    rx: channel::Receiver<Vec<(Point3<f32>, Point3<f32>)>>,
+    points: Option<Vec<(Point3<f32>, Point3<f32>)>>,
 }
 
 impl PcdVizState {
-    pub fn new(rx: channel::Receiver<Vec<Point3<f32>>>) -> Self {
+    pub fn new(rx: channel::Receiver<Vec<(Point3<f32>, Point3<f32>)>>) -> Self {
         Self { rx, points: None }
     }
 }
@@ -70,8 +70,9 @@ impl State for PcdVizState {
 
         // draw points
         if let Some(points) = &self.points {
-            for point in points.iter() {
-                window.draw_point(point, &Point3::new(1.0, 1.0, 1.0));
+            for (point, color) in points.iter() {
+                let point = Point3::<f32>::new(-point.x, -point.y, point.z);
+                window.draw_point(&point, &Point3::new(color.x, color.y, color.z));
             }
         }
     }
