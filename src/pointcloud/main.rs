@@ -108,7 +108,6 @@ fn process_point_cloud(
 
     let vertices = points_frame.vertices()?;
     let pixels = points_frame.texture_coordinates()?;
-    let pixels = points_frame.texture_coordinates()?;
 
     let points = vertices
         .iter()
@@ -139,34 +138,33 @@ fn get_texcolor(texture: &Frame<Video>, [u, v]: &[i32; 2]) -> Result<(f32, f32, 
     //   the sensors overlap you can't have RGB data coverage on the boundaries of the depth frame.
     //   The [U,V] outliers designate pixels for which the texture mapping occurs outside of the
     //   RGB sensor's FOV. #2355
-    let test_x = unsafe { std::mem::transmute::<i32, f32>(*u) };
-    let test_y = unsafe { std::mem::transmute::<i32, f32>(*v) };
+    let x_raw = unsafe { std::mem::transmute::<i32, f32>(*u) };
+    let y_raw = unsafe { std::mem::transmute::<i32, f32>(*v) };
 
-    if test_x < 0f32 || test_x > 1f32 {
-        return Ok((0f32, 0f32, 0f32));
-    }
+    let x = scale_and_clamp(x_raw, w);
+    let y = scale_and_clamp(y_raw, h);
 
-    if test_y < 0f32 || test_y > 1f32 {
-        return Ok((0f32, 0f32, 0f32));
-    }
-
-    let x = std::cmp::min(
-        std::cmp::max((test_x * w as f32) as isize, 0),
-        w as isize - 1,
-    ) as usize;
-    let y = std::cmp::min(
-        std::cmp::max((test_y * h as f32) as isize, 0),
-        h as isize - 1,
-    ) as usize;
+    let (x, y) = match (x, y) {
+        (Some(x), Some(y)) => (x, y),
+        _ => return Ok((0f32, 0f32, 0f32)),
+    };
 
     let idx = x * bytes_per_pixel + y * stride;
-
-    let r = data[idx];
-    let g = data[idx + 1];
-    let b = data[idx + 2];
-
-    let r = r as f32 / 255f32;
-    let g = g as f32 / 255f32;
-    let b = b as f32 / 255f32;
+    let r = data[idx] as f32 / 255f32;
+    let g = data[idx + 1] as f32 / 255f32;
+    let b = data[idx + 2] as f32 / 255f32;
     Ok((r, g, b))
+}
+
+/// Scales the provided coordinate to a range of `0`..`max_value`. If the input
+/// coordinate is outside the range `0..1`, the value `None` is returned.
+fn scale_and_clamp(coordinate: f32, max_value: usize) -> Option<usize> {
+    if coordinate < 0f32 || coordinate > 1f32 {
+        return None;
+    }
+
+    Some(std::cmp::min(
+        std::cmp::max((coordinate * max_value as f32) as usize, 0),
+        max_value as usize - 1,
+    ) as usize)
 }

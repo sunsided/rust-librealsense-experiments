@@ -11,7 +11,8 @@ Don't expect anything crazy here. 🙌
   cargo run --bin enumerate
   ```
 
-- [pointcloud/main.rs](src/pointcloud/main.rs): Capturing a point cloud from the first device and rendering it in 3D:
+- [pointcloud/main.rs](src/pointcloud/main.rs): Capturing a point cloud from the first device and rendering it in 3D.
+  See [src/pointcloud/README.md](src/pointcloud/README.md) for more insights.
   ```bash
   cargo run --bin pointcloud
   ```
