@@ -7,11 +7,11 @@ default-run = "enumerate"
 
 [[bin]]
 name = "enumerate"
-path = "src/enumerate.rs"
+path = "src/enumerate/main.rs"
 
 [[bin]]
 name = "pointcloud"
-path = "src/pointcloud.rs"
+path = "src/pointcloud/main.rs"
 
 [dependencies]
 realsense-rust = "0.3.2"
