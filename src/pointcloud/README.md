@@ -36,7 +36,7 @@ After that, discarding everything out of range `0 .. 1` (i.e. mapping it to blac
 It appears that the official documentation indeed returns an [rs2::texture_coordinate](https://intelrealsense.github.io/librealsense/doxygen/structrs2_1_1texture__coordinate.html)
 struct instead which is composed of two `float` values, but there seems to be
 a discrepancy between the C++ API (returning floats) and the C API (returning ints).
-I opened issue [realsense-rust issue #14](https://github.com/jerry73204/realsense-rust/issues/14) about it.
+I opened issue [realsense-rust #14](https://github.com/jerry73204/realsense-rust/issues/14) about it.
 
 ---
 
